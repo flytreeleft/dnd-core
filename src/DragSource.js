@@ -7,5 +7,7 @@ export default class DragSource {
     return handle === monitor.getSourceId();
   }
 
+  dragging() { }
+
   endDrag() { }
 }

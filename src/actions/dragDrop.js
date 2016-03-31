@@ -94,6 +94,10 @@ export function hover(targetIds, { clientOffset = null } = {}) {
     'Cannot call hover after drop.'
   );
 
+  const sourceId = monitor.getSourceId();
+  const source = registry.getSource(sourceId, true);
+  source.dragging(monitor, sourceId);
+
   const draggedItemType = monitor.getItemType();
   for (let i = 0; i < targetIds.length; i++) {
     const targetId = targetIds[i];
