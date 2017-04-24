@@ -1,14 +1,41 @@
 import invariant from 'invariant';
 import isArray from 'lodash/isArray';
+import uniq from 'lodash/uniq';
 import matchesType from './utils/matchesType';
 import HandlerRegistry from './HandlerRegistry';
 import { getSourceClientOffset, getDifferenceFromInitialOffset } from './reducers/dragOffset';
-import { areDirty } from './reducers/dirtyHandlerIds';
 
 export default class DragDropMonitor {
   constructor(store) {
     this.store = store;
     this.registry = new HandlerRegistry(store);
+    this.observeStateChange();
+  }
+
+  observeStateChange() {
+    this.stateChangeListenersMap = {};
+
+    let prevStateId = this.store.getState().stateId;
+    this.store.subscribe(() => {
+      const state = this.store.getState();
+      const currentStateId = state.stateId;
+      if (currentStateId === prevStateId) {
+        return;
+      }
+
+      const dirtyHandlerIds = state.dirtyHandlerIds;
+      const listeners = dirtyHandlerIds.reduce((result, handleId) => {
+        return result.concat(this.stateChangeListenersMap[handleId] || []);
+      }, []);
+
+      try {
+        uniq(listeners).forEach((listener) => {
+          listener();
+        });
+      } finally {
+        prevStateId = currentStateId;
+      }
+    });
   }
 
   subscribeToStateChange(listener, options = {}) {
@@ -22,25 +49,45 @@ export default class DragDropMonitor {
       'handlerIds, when specified, must be an array of strings.',
     );
 
-    let prevStateId = this.store.getState().stateId;
-    const handleChange = () => {
-      const state = this.store.getState();
-      const currentStateId = state.stateId;
-      try {
-        const canSkipListener = currentStateId === prevStateId || (
-          currentStateId === prevStateId + 1 &&
-          !areDirty(state.dirtyHandlerIds, handlerIds)
-        );
-
-        if (!canSkipListener) {
-          listener();
+    if (!handlerIds) {
+      let prevStateId = this.store.getState().stateId;
+      const handleChange = () => {
+        const state = this.store.getState();
+        const currentStateId = state.stateId;
+        if (currentStateId === prevStateId) {
+          return;
         }
-      } finally {
-        prevStateId = currentStateId;
-      }
-    };
 
-    return this.store.subscribe(handleChange);
+        try {
+          listener();
+        } finally {
+          prevStateId = currentStateId;
+        }
+      };
+
+      return this.store.subscribe(handleChange);
+    }
+
+    handlerIds.forEach((handlerId) => {
+      let listeners = [].concat(this.stateChangeListenersMap[handlerId] || []);
+
+      if (listeners.indexOf(listener) < 0) {
+        listeners.push(listener);
+        this.stateChangeListenersMap[handlerId] = listeners;
+      }
+    });
+
+    return () => {
+      handlerIds.forEach((handlerId) => {
+        let listeners = [].concat(this.stateChangeListenersMap[handlerId] || []);
+        let index = listeners.indexOf(listener);
+
+        if (index >= 0) {
+          listeners.splice(index, 1);
+          this.stateChangeListenersMap[handlerId] = listeners;
+        }
+      });
+    };
   }
 
   subscribeToOffsetChange(listener) {
