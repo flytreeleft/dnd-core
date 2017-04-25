@@ -4,6 +4,9 @@ const initialState = {
   initialSourceClientOffset: null,
   initialClientOffset: null,
   clientOffset: null,
+  clientOffsetUntilToTop: null,
+  pageOffset: null,
+  pageOffsetUntilToTop: null,
 };
 
 function areOffsetsEqual(offsetA, offsetB) {
@@ -25,6 +28,9 @@ export default function dragOffset(state = initialState, action) {
         initialSourceClientOffset: action.sourceClientOffset,
         initialClientOffset: action.clientOffset,
         clientOffset: action.clientOffset,
+        clientOffsetUntilToTop: action.clientOffsetUntilToTop,
+        pageOffset: action.pageOffset,
+        pageOffsetUntilToTop: action.pageOffsetUntilToTop,
       };
     case HOVER:
       if (areOffsetsEqual(state.clientOffset, action.clientOffset)) {
@@ -33,6 +39,9 @@ export default function dragOffset(state = initialState, action) {
       return {
         ...state,
         clientOffset: action.clientOffset,
+        clientOffsetUntilToTop: action.clientOffsetUntilToTop,
+        pageOffset: action.pageOffset,
+        pageOffsetUntilToTop: action.pageOffsetUntilToTop,
       };
     case END_DRAG:
     case DROP:

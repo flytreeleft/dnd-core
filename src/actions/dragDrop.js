@@ -9,8 +9,8 @@ export const HOVER = 'dnd-core/HOVER';
 export const DROP = 'dnd-core/DROP';
 export const END_DRAG = 'dnd-core/END_DRAG';
 
-export function beginDrag(sourceIds, options = { publishSource: true, clientOffset: null }) {
-  const { publishSource, clientOffset, getSourceClientOffset } = options;
+export function beginDrag(sourceIds, options = { publishSource: true }) {
+  const { publishSource, getEventOffset, getSourceClientOffset } = options;
   invariant(isArray(sourceIds), 'Expected sourceIds to be an array.');
 
   const monitor = this.getMonitor();
@@ -38,6 +38,7 @@ export function beginDrag(sourceIds, options = { publishSource: true, clientOffs
     return;
   }
 
+  let { clientOffset, clientOffsetUntilToTop, pageOffset, pageOffsetUntilToTop } = getEventOffset();
   let sourceClientOffset = null;
   if (clientOffset) {
     invariant(
@@ -59,8 +60,11 @@ export function beginDrag(sourceIds, options = { publishSource: true, clientOffs
     itemType,
     item,
     sourceId,
-    clientOffset,
     sourceClientOffset,
+    clientOffset,
+    clientOffsetUntilToTop,
+    pageOffset,
+    pageOffsetUntilToTop,
     isSourcePublic: publishSource,
   };
 }
@@ -74,7 +78,7 @@ export function publishDragSource() {
   return { type: PUBLISH_DRAG_SOURCE };
 }
 
-export function hover(targetIdsArg, { clientOffset = null } = {}) {
+export function hover(targetIdsArg, { getEventOffset } = {}) {
   invariant(isArray(targetIdsArg), 'Expected targetIds to be an array.');
   const targetIds = targetIdsArg.slice(0);
 
@@ -128,10 +132,14 @@ export function hover(targetIdsArg, { clientOffset = null } = {}) {
     target.hover(monitor, targetId);
   }
 
+  let { clientOffset, clientOffsetUntilToTop, pageOffset, pageOffsetUntilToTop } = getEventOffset();
   return {
     type: HOVER,
     targetIds,
     clientOffset,
+    clientOffsetUntilToTop,
+    pageOffset,
+    pageOffsetUntilToTop,
   };
 }
 
