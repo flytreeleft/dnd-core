@@ -1,9 +1,9 @@
 import invariant from 'invariant';
 import isArray from 'lodash/isArray';
-import uniq from 'lodash/uniq';
 import matchesType from './utils/matchesType';
 import HandlerRegistry from './HandlerRegistry';
 import { getSourceClientOffset, getDifferenceFromInitialOffset } from './reducers/dragOffset';
+import { areDirty } from './reducers/dirtyHandlerIds';
 
 export default class DragDropMonitor {
   constructor(store) {
@@ -13,7 +13,7 @@ export default class DragDropMonitor {
   }
 
   observeStateChange() {
-    this.stateChangeListenersMap = {};
+    this.stateChangeListeners = [];
 
     let prevStateId = this.store.getState().stateId;
     this.store.subscribe(() => {
@@ -23,13 +23,19 @@ export default class DragDropMonitor {
         return;
       }
 
-      const dirtyHandlerIds = state.dirtyHandlerIds;
-      const listeners = dirtyHandlerIds.reduce((result, handleId) => {
-        return result.concat(this.stateChangeListenersMap[handleId] || []);
-      }, []);
+      const listeners = [];
+      this.stateChangeListeners.slice().forEach((listener) => {
+        if (currentStateId === prevStateId + 1) {
+          if (areDirty(state.dirtyHandlerIds, listener.handlerIds)) {
+            listeners.push(listener.cb);
+          }
+        } else {
+          listeners.push(listener.cb);
+        }
+      });
 
       try {
-        uniq(listeners).forEach((listener) => {
+        listeners.forEach((listener) => {
           listener();
         });
       } finally {
@@ -49,44 +55,17 @@ export default class DragDropMonitor {
       'handlerIds, when specified, must be an array of strings.',
     );
 
-    if (!handlerIds) {
-      let prevStateId = this.store.getState().stateId;
-      const handleChange = () => {
-        const state = this.store.getState();
-        const currentStateId = state.stateId;
-        if (currentStateId === prevStateId) {
-          return;
-        }
-
-        try {
-          listener();
-        } finally {
-          prevStateId = currentStateId;
-        }
-      };
-
-      return this.store.subscribe(handleChange);
-    }
-
-    handlerIds.forEach((handlerId) => {
-      let listeners = [].concat(this.stateChangeListenersMap[handlerId] || []);
-
-      if (listeners.indexOf(listener) < 0) {
-        listeners.push(listener);
-        this.stateChangeListenersMap[handlerId] = listeners;
-      }
-    });
+    const stateChangeListener = {
+      handlerIds,
+      cb: listener
+    };
+    this.stateChangeListeners.push(stateChangeListener);
 
     return () => {
-      handlerIds.forEach((handlerId) => {
-        let listeners = [].concat(this.stateChangeListenersMap[handlerId] || []);
-        let index = listeners.indexOf(listener);
-
-        if (index >= 0) {
-          listeners.splice(index, 1);
-          this.stateChangeListenersMap[handlerId] = listeners;
-        }
-      });
+      var index = this.stateChangeListeners.indexOf(stateChangeListener);
+      if (index >= 0) {
+        this.stateChangeListeners.splice(index, 1);
+      }
     };
   }
 
@@ -217,8 +196,16 @@ export default class DragDropMonitor {
     return this.store.getState().dragOffset.initialSourceClientOffset;
   }
 
-  getClientOffset() {
-    return this.store.getState().dragOffset.clientOffset;
+  getClientOffset(untilToTopWin) {
+    return untilToTopWin ?
+      this.store.getState().dragOffset.clientOffsetUntilToTop :
+      this.store.getState().dragOffset.clientOffset;
+  }
+
+  getPageOffset(untilToTopWin) {
+    return untilToTopWin ?
+      this.store.getState().dragOffset.pageOffsetUntilToTop :
+      this.store.getState().dragOffset.pageOffset;
   }
 
   getSourceClientOffset() {
