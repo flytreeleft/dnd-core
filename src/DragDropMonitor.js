@@ -57,12 +57,12 @@ export default class DragDropMonitor {
 
     const stateChangeListener = {
       handlerIds,
-      cb: listener
+      cb: listener,
     };
     this.stateChangeListeners.push(stateChangeListener);
 
     return () => {
-      var index = this.stateChangeListeners.indexOf(stateChangeListener);
+      const index = this.stateChangeListeners.indexOf(stateChangeListener);
       if (index >= 0) {
         this.stateChangeListeners.splice(index, 1);
       }

@@ -38,7 +38,8 @@ export function beginDrag(sourceIds, options = { publishSource: true }) {
     return;
   }
 
-  let { clientOffset, clientOffsetUntilToTop, pageOffset, pageOffsetUntilToTop } = getEventOffset();
+  const eventOffset = getEventOffset();
+  const { clientOffset, clientOffsetUntilToTop, pageOffset, pageOffsetUntilToTop } = eventOffset;
   let sourceClientOffset = null;
   if (clientOffset) {
     invariant(
@@ -132,7 +133,8 @@ export function hover(targetIdsArg, { getEventOffset } = {}) {
     target.hover(monitor, targetId);
   }
 
-  let { clientOffset, clientOffsetUntilToTop, pageOffset, pageOffsetUntilToTop } = getEventOffset();
+  const eventOffset = getEventOffset();
+  const { clientOffset, clientOffsetUntilToTop, pageOffset, pageOffsetUntilToTop } = eventOffset;
   return {
     type: HOVER,
     targetIds,
